@@ -1,0 +1,88 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: md_document
+keep_md: true
+---
+
+## Step 1
+## Loading and preprocessing the data
+```{r, echo = TRUE}
+activity<-read.csv("activity.csv")
+```
+
+Exploring the basics of this data
+```{r}
+#total number of missing data
+sum(is.na(activity$steps))
+
+activity$date <- as.POSIXct(activity$date, "%Y-%m-%d")
+weekday <- weekdays(activity$date)
+activity <- cbind(activity,weekday)
+dim(activity)
+names(activity)
+head(activity)
+str(activity)
+```
+
+## Step 2
+## What is mean total number of steps taken per day?
+```{r, echo = TRUE}
+total_steps <- with(activity, aggregate(steps, by = list(date), 
+                                                 FUN = sum, na.rm = TRUE))
+names(total_steps) <- c("date", "steps")
+
+hist(total_steps$steps, main = "Total number of steps taken per day", xlab = "Total steps taken per day", col = "red", ylim = c(0,20), breaks = seq(0,25000, by=2500))
+
+mean(total_steps$steps)
+median(total_steps$steps)
+
+```
+
+## Step 3
+## What is the average daily activity pattern?
+
+```{r, echo = TRUE}
+average_act <- aggregate(activity$steps, by=list(activity$interval), FUN=mean, na.rm=TRUE)
+names(average_act) <- c("interval", "mean")
+
+plot(average_act$interval, average_act$mean, type = "l", col="red", lwd = 2, xlab="Interval", ylab="Average number of steps", main="Average number of steps per intervals")
+
+#Which 5-minute interval, on average across all the days in the dataset, #contains the maximum number of steps?
+
+average_act[which.max(average_act$mean), ]$interval
+
+```
+## Step 4
+## Imputing missing values
+
+```{r}
+activity2 <- activity
+sapply(activity2, class)
+activity2$steps[is.na(activity2$steps)] <- mean(na.omit(activity$steps))
+activity2$date <- as.Date(activity2$date, format = "%Y-%m-%d")
+steps_day <- aggregate(steps ~ date, rm.na = TRUE, data = activity, FUN = sum)
+steps_day2 <- aggregate(steps ~ date, rm.na = TRUE, data = activity2, FUN = sum)
+
+par(mfrow = c(1, 2))
+plot(steps_day, type = "h", lwd = 5,lend = "square", main = "With NAs")
+abline(h = seq(0, 20000, 2500), lty = "dashed")
+plot(steps_day2, type = "h", lwd = 5, lend = "square", main = "NAs filled")
+abline(h = seq(0, 20000, 2500), lty = "dashed")
+```
+
+
+## Step 5
+## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+activity2$weekday <- factor(format(activity2$date, "%A"))
+
+levels(activity2$weekday) <- list(weekday = c("Monday", "Tuesday",
+                                              "Wednesday", "Thursday",
+                                              "Friday"), weekend =
+                                          c("Saturday", "Sunday"))
+par(mfrow = c(2, 1))
+
+with(activity2[activity2$weekday == "weekend",], plot(aggregate(steps ~ interval, FUN = mean), type = "l", main = "Weekends"))
+
+with(activity2[activity2$weekday == "weekday",], plot(aggregate(steps ~ interval, FUN = mean), type = "l", main = "Weekdays"))
+```
